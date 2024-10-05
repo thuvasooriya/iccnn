@@ -2,6 +2,16 @@
 
 simple convolution neural network for image classification
 
+## getting started
+
+1. have `python >=3.11.0` installed in your respective platform
+2. clone the repository
+3. create a python virtual environment `python -m venv .venv`
+4. activate the python virtual environment `source .venv/bin/activate`
+5. make sure the python in your path is from the virtual environment
+6. install pip dependencies `pip install -r requirements.txt`
+7. run `python main.py`
+
 ### plan outline
 
 #### Week 1: Environment Setup and Dataset Preparation
