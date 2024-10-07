@@ -28,7 +28,7 @@ Person 2: Dataset Selection
 - Download the dataset and prepare the data pipeline (e.g., loading, preprocessing, normalization)
 - Split the dataset into training (60%), validation (20%), and test (20%) sets
 
-Person 3: CNN Architecture Definition
+Abithan: CNN Architecture Definition
 
 - Define the CNN architecture with the layers mentioned (convolutional, max-pooling, fully connected, dropout, softmax)
 - Decide the parameters (filter size, kernel size, activation functions, dropout rate) and justify them
