@@ -14,36 +14,67 @@ simple convolution neural network for image classification
 
 ### plan outline
 
-#### Week 1: Environment Setup and Dataset Preparation
+#### week 1: environment setup and dataset preparation
 
-Person 1: Environment Setup
+[thuva](https://github.com/thuvasooriya): environment setup
 
-- Install necessary libraries (TensorFlow, Keras, PyTorch, etc.)
-- Set up a shared repository (e.g., GitHub) for collaboration
-- Ensure all team members have the correct environment
+- install necessary libraries (tensorflow, keras, pytorch, etc.)
+- set up a shared repository (e.g., github) for collaboration
+- ensure all team members have the correct environment
 
-Person 2: Dataset Selection
+person 2: dataset selection
 
-- Search for appropriate datasets from the UCI Machine Learning Repository (ensure it’s not CIFAR-10)
-- Download the dataset and prepare the data pipeline (e.g., loading, preprocessing, normalization)
-- Split the dataset into training (60%), validation (20%), and test (20%) sets
+- search for appropriate datasets from the uci machine learning repository (ensure it’s not cifar-10)
+- download the dataset and prepare the data pipeline (e.g., loading, preprocessing, normalization)
+- split the dataset into training (60%), validation (20%), and test (20%) sets
 
-Abithan: CNN Architecture Definition
+abithan: cnn architecture definition
 
-- Define the CNN architecture with the layers mentioned (convolutional, max-pooling, fully connected, dropout, softmax)
-- Decide the parameters (filter size, kernel size, activation functions, dropout rate) and justify them
-- Share initial architecture design with the team for feedback
+- define the cnn architecture with the layers mentioned (convolutional, max-pooling, fully connected, dropout, softmax)
+- decide the parameters (filter size, kernel size, activation functions, dropout rate) and justify them
+- share initial architecture design with the team for feedback
 
-Person 4: Literature Review
+person 4: literature review
 
-- Research activation functions (ReLU, softmax) and justify their use
-- Research optimizers (Adam vs. SGD) and loss functions (sparse categorical crossentropy) for justification
-- Summarize findings for the team
+- research activation functions (relu, softmax) and justify their use
+- research optimizers (adam vs. sgd) and loss functions (sparse categorical crossentropy) for justification
+- summarize findings for the team
 
-Deliverables by End of Week 1:
+deliverables by end of week 1:
 
-- Environment set up and shared repo
-- Get Everyone upto speed with git and collaboration
-- Dataset selected, preprocessed, and split
-- Initial CNN architecture defined
-- Justification for activations, optimizers, and loss function prepared
+- [x] environment set up and shared repo
+- [ ] get everyone upto speed with git and collaboration
+- [ ] dataset selected, preprocessed, and split
+- [ ] initial cnn architecture defined
+- [ ] justification for activations, optimizers, and loss function prepared
+
+#### week 2: cnn model implementation and training
+
+person 1: cnn model implementation
+
+- implement the cnn architecture in code (using tensorflow/keras or pytorch)
+- ensure the model uses the adam optimizer and sparse categorical crossentropy loss function
+
+person 2: training and validation
+
+- train the cnn model for 20 epochs with a learning rate of 0.001
+- plot training and validation loss for each epoch
+- evaluate the initial performance on validation data
+
+person 3: hyperparameter tuning
+
+- run experiments with different learning rates (0.0001, 0.001, 0.01, 0.1)
+- plot training and validation loss for different learning rates
+- select the best learning rate with justification
+
+person 4: testing and initial evaluation
+
+- evaluate the trained cnn model on the test set
+- record test accuracy, confusion matrix, precision, and recall
+- analyze the results
+
+deliverables by end of week 2:
+
+- [ ] cnn model implemented and trained
+- [ ] training and validation loss plots for different learning rates
+- [ ] test accuracy, confusion matrix, precision, and recall recorded
