@@ -1,28 +1,16 @@
+import matplotlib.pyplot as plt
 import torch
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader, random_split
-from torch.optim import Adam
 import torch.nn as nn
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix
+from torch.optim import Adam
+from torch.utils.data import DataLoader, random_split
+from torchvision import datasets, transforms
 
-# Transform: normalize and convert to tensor
-transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+LEARNING_RATE = 0.001
+BATCH_SIZE = 64
+NUM_EPOCHS = 5
 
-# Load MNIST
-mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-mnist_test = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
-
-# Split training into training and validation
-train_size = int(0.8 * len(mnist_train))
-val_size = len(mnist_train) - train_size
-train_data, val_data = random_split(mnist_train, [train_size, val_size])
-
-# DataLoaders
-train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
-val_loader = DataLoader(val_data, batch_size=64, shuffle=False)
-test_loader = DataLoader(mnist_test, batch_size=64, shuffle=False)
 
 # CNN Model
 class CNN(nn.Module):
@@ -47,8 +35,9 @@ class CNN(nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
 
+
 # Training function
-def train_model(model, train_loader, val_loader, epochs=5, lr=0.001):
+def train_model(model, train_loader, val_loader, epochs=NUM_EPOCHS, lr=LEARNING_RATE):
     optimizer = Adam(model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss()
     train_loss, val_loss = [], []
@@ -75,21 +64,10 @@ def train_model(model, train_loader, val_loader, epochs=5, lr=0.001):
                 val_running_loss += loss.item()
         val_loss.append(val_running_loss / len(val_loader))
 
-        print(f"Epoch {epoch+1}/{epochs} - Train Loss: {train_loss[-1]:.4f}, Val Loss: {val_loss[-1]:.4f}")
+        print(
+            f"Epoch {epoch+1}/{epochs} - Train Loss: {train_loss[-1]:.4f}, Val Loss: {val_loss[-1]:.4f}"
+        )
     return train_loss, val_loss
-
-# Initialize model, train and validate
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = CNN().to(device)
-train_loss, val_loss = train_model(model, train_loader, val_loader)
-
-# Plot losses
-plt.plot(train_loss, label='Train Loss')
-plt.plot(val_loss, label='Validation Loss')
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.legend()
-plt.show()
 
 
 # Evaluate on test data
@@ -105,4 +83,48 @@ def evaluate_model(model, test_loader):
     print("Classification Report:\n", classification_report(y_true, y_pred))
     print("Confusion Matrix:\n", confusion_matrix(y_true, y_pred))
 
-evaluate_model(model, test_loader)
+
+if __name__ == "__main__":
+    # transform: normalize and convert to tensor
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
+    )
+
+    # Load MNIST
+    mnist_train = datasets.MNIST(
+        root="./data", train=True, download=True, transform=transform
+    )
+    mnist_test = datasets.MNIST(
+        root="./data", train=False, download=True, transform=transform
+    )
+
+    # Split training into training and validation
+    train_size = int(0.8 * len(mnist_train))
+    val_size = len(mnist_train) - train_size
+    train_data, val_data = random_split(mnist_train, [train_size, val_size])
+
+    # DataLoaders
+    train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
+    val_loader = DataLoader(val_data, batch_size=64, shuffle=False)
+    test_loader = DataLoader(mnist_test, batch_size=64, shuffle=False)
+
+    # Initialize model, train and validate
+    device = torch.device(
+        "cuda"
+        if torch.cuda.is_available()
+        # else "mps"
+        # if torch.backends.mps.is_available()
+        else "cpu"
+    )
+    model = CNN().to(device)
+    train_loss, val_loss = train_model(model, train_loader, val_loader)
+
+    # Plot losses
+    plt.plot(train_loss, label="Train Loss")
+    plt.plot(val_loss, label="Validation Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.show()
+
+    evaluate_model(model, test_loader)
