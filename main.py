@@ -1,179 +1,108 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import torch
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader, random_split
+from torch.optim import Adam
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-import torchvision
-import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
+from sklearn.metrics import classification_report, confusion_matrix
 
+# Transform: normalize and convert to tensor
+transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
-def main():
-    transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-    )
+# Load MNIST
+mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+mnist_test = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
 
-    batch_size = 4
+# Split training into training and validation
+train_size = int(0.8 * len(mnist_train))
+val_size = len(mnist_train) - train_size
+train_data, val_data = random_split(mnist_train, [train_size, val_size])
 
-    trainset = torchvision.datasets.CIFAR10(
-        root="./data", train=True, download=True, transform=transform
-    )
-    trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=batch_size, shuffle=True, num_workers=2
-    )
+# DataLoaders
+train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
+val_loader = DataLoader(val_data, batch_size=64, shuffle=False)
+test_loader = DataLoader(mnist_test, batch_size=64, shuffle=False)
 
-    testset = torchvision.datasets.CIFAR10(
-        root="./data", train=False, download=True, transform=transform
-    )
-    testloader = torch.utils.data.DataLoader(
-        testset, batch_size=batch_size, shuffle=False, num_workers=2
-    )
+# CNN Model
+class CNN(nn.Module):
+    def __init__(self):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3)
+        self.pool1 = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3)
+        self.pool2 = nn.MaxPool2d(2, 2)
+        self.fc1 = nn.Linear(64 * 5 * 5, 128)
+        self.dropout = nn.Dropout(0.5)
+        self.fc2 = nn.Linear(128, 10)
 
-    classes = (
-        "plane",
-        "car",
-        "bird",
-        "cat",
-        "deer",
-        "dog",
-        "frog",
-        "horse",
-        "ship",
-        "truck",
-    )
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = self.pool1(x)
+        x = F.relu(self.conv2(x))
+        x = self.pool2(x)
+        x = x.view(-1, 64 * 5 * 5)
+        x = F.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return F.log_softmax(x, dim=1)
 
-    # device = torch.device(
-    #     "cuda:0"
-    #     if torch.cuda.is_available()
-    #     else "mps"
-    #     if torch.backends.mps.is_available()
-    #     else "cpu"
-    # )
-    #
-    # print(device)
-
-    # functions to show an image
-
-    def imshow(img):
-        img = img / 2 + 0.5  # unnormalize
-        npimg = img.numpy()
-        plt.imshow(np.transpose(npimg, (1, 2, 0)))
-        plt.show()
-
-    # get some random training images
-    dataiter = iter(trainloader)
-    images, labels = next(dataiter)
-
-    # show images
-    imshow(torchvision.utils.make_grid(images))
-    # print labels
-    print(" ".join(f"{classes[labels[j]]:5s}" for j in range(batch_size)))
-
-    class Net(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.conv1 = nn.Conv2d(3, 6, 5)
-            self.pool = nn.MaxPool2d(2, 2)
-            self.conv2 = nn.Conv2d(6, 16, 5)
-            self.fc1 = nn.Linear(16 * 5 * 5, 120)
-            self.fc2 = nn.Linear(120, 84)
-            self.fc3 = nn.Linear(84, 10)
-
-        def forward(self, x):
-            x = self.pool(F.relu(self.conv1(x)))
-            x = self.pool(F.relu(self.conv2(x)))
-            x = torch.flatten(x, 1)  # flatten all dimensions except batch
-            x = F.relu(self.fc1(x))
-            x = F.relu(self.fc2(x))
-            x = self.fc3(x)
-            return x
-
-    net = Net()
-
+# Training function
+def train_model(model, train_loader, val_loader, epochs=5, lr=0.001):
+    optimizer = Adam(model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    train_loss, val_loss = [], []
 
-    for epoch in range(2):  # loop over the dataset multiple times
+    for epoch in range(epochs):
+        model.train()
         running_loss = 0.0
-        for i, data in enumerate(trainloader, 0):
-            # get the inputs; data is a list of [inputs, labels]
-            inputs, labels = data
-
-            # zero the parameter gradients
+        for images, labels in train_loader:
             optimizer.zero_grad()
-
-            # forward + backward + optimize
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
+            output = model(images)
+            loss = criterion(output, labels)
             loss.backward()
             optimizer.step()
-
-            # print statistics
             running_loss += loss.item()
-            if i % 2000 == 1999:  # print every 2000 mini-batches
-                print(f"[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}")
-                running_loss = 0.0
+        train_loss.append(running_loss / len(train_loader))
 
-    print("finished training")
+        # Validation loss
+        model.eval()
+        val_running_loss = 0.0
+        with torch.no_grad():
+            for images, labels in val_loader:
+                output = model(images)
+                loss = criterion(output, labels)
+                val_running_loss += loss.item()
+        val_loss.append(val_running_loss / len(val_loader))
 
-    print("saving model")
-    PATH = "./cifar_net.pth"
-    torch.save(net.state_dict(), PATH)
+        print(f"Epoch {epoch+1}/{epochs} - Train Loss: {train_loss[-1]:.4f}, Val Loss: {val_loss[-1]:.4f}")
+    return train_loss, val_loss
 
-    dataiter = iter(testloader)
-    images, labels = next(dataiter)
+# Initialize model, train and validate
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = CNN().to(device)
+train_loss, val_loss = train_model(model, train_loader, val_loader)
 
-    # print images
-    imshow(torchvision.utils.make_grid(images))
-    print("groundtruth: ", " ".join(f"{classes[labels[j]]:5s}" for j in range(4)))
+# Plot losses
+plt.plot(train_loss, label='Train Loss')
+plt.plot(val_loss, label='Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
 
-    net = Net()
-    net.load_state_dict(torch.load(PATH, weights_only=True))
 
-    outputs = net(images)
-
-    _, predicted = torch.max(outputs, 1)
-
-    print("predicted: ", " ".join(f"{classes[predicted[j]]:5s}" for j in range(4)))
-
-    correct = 0
-    total = 0
-    # since we're not training, we don't need to calculate the gradients for our outputs
+# Evaluate on test data
+def evaluate_model(model, test_loader):
+    model.eval()
+    y_true, y_pred = [], []
     with torch.no_grad():
-        for data in testloader:
-            images, labels = data
-            # calculate outputs by running images through the network
-            outputs = net(images)
-            # the class with the highest energy is what we choose as prediction
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+        for images, labels in test_loader:
+            output = model(images)
+            _, predicted = torch.max(output, 1)
+            y_true.extend(labels.cpu().numpy())
+            y_pred.extend(predicted.cpu().numpy())
+    print("Classification Report:\n", classification_report(y_true, y_pred))
+    print("Confusion Matrix:\n", confusion_matrix(y_true, y_pred))
 
-    print(
-        f"accuracy of the network on the 10000 test images: {100 * correct // total} %"
-    )
-
-    # prepare to count predictions for each class
-    correct_pred = {classname: 0 for classname in classes}
-    total_pred = {classname: 0 for classname in classes}
-
-    # again no gradients needed
-    with torch.no_grad():
-        for data in testloader:
-            images, labels = data
-            outputs = net(images)
-            _, predictions = torch.max(outputs, 1)
-            # collect the correct predictions for each class
-            for label, prediction in zip(labels, predictions):
-                if label == prediction:
-                    correct_pred[classes[label]] += 1
-                total_pred[classes[label]] += 1
-
-    # print accuracy for each class
-    for classname, correct_count in correct_pred.items():
-        accuracy = 100 * float(correct_count) / total_pred[classname]
-        print(f"Accuracy for class: {classname:5s} is {accuracy:.1f} %")
-
-
-if __name__ == "__main__":
-    main()
+evaluate_model(model, test_loader)
