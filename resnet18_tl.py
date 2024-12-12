@@ -103,7 +103,6 @@ for epoch in range(epochs):
 # Step 4: Model Evaluation
 print("Evaluating the model...")
 y_true, y_pred = [], []
-summary(model)
 model.eval()
 with torch.no_grad():
     for images, labels in test_loader:
@@ -157,3 +156,5 @@ plt.legend()
 
 plt.tight_layout()
 plt.show()
+
+summary(model, (3, 224, 224))

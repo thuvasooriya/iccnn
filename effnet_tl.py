@@ -57,7 +57,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.classifier.parameters(), lr=0.001)
 
 # Step 3: Training the Model
-epochs = 2
+epochs = 5
 train_losses = []
 val_losses = []
 test_accuracies = []
@@ -105,7 +105,6 @@ for epoch in range(epochs):
 # Step 4: Model Evaluation
 print("Evaluating the model...")
 y_true, y_pred = [], []
-summary(model)
 model.eval()
 with torch.no_grad():
     for images, labels in test_loader:
@@ -159,3 +158,4 @@ plt.legend()
 
 plt.tight_layout()
 plt.show()
+summary(model, (3, 224, 224))
