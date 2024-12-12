@@ -54,8 +54,9 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.fc.parameters(), lr=0.001)
 
 # Step 3: Training the Model
-epochs = 5
+epochs = 2
 train_losses = []
+val_losses = []
 test_accuracies = []
 
 for epoch in range(epochs):
@@ -78,6 +79,7 @@ for epoch in range(epochs):
 
     # Evaluate on the test set
     model.eval()
+    val_running_loss = 0.0
     correct = 0
     total = 0
     with torch.no_grad():
@@ -85,15 +87,22 @@ for epoch in range(epochs):
             images, labels = images.to(device), labels.to(device)
             outputs = model(images)
             _, predicted = torch.max(outputs, 1)
+            loss = criterion(outputs, labels)
+            val_running_loss += loss.item()
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     accuracy = correct / total
     test_accuracies.append(accuracy)
+    val_losses.append(val_running_loss / len(test_loader))
+    print(
+        f"Epoch {epoch + 1}/{epochs}, Validation Loss: {val_running_loss / len(test_loader):.4f}"
+    )
     print(f"Epoch {epoch + 1}/{epochs}, Test Accuracy: {accuracy:.4f}")
 
 # Step 4: Model Evaluation
 print("Evaluating the model...")
 y_true, y_pred = [], []
+model.summary()
 model.eval()
 with torch.no_grad():
     for images, labels in test_loader:
@@ -116,16 +125,26 @@ disp.plot(cmap="viridis")
 plt.title("Confusion Matrix")
 plt.show()
 
-# Training Loss and Test Accuracy Visualization
-plt.figure(figsize=(12, 5))
-plt.subplot(1, 2, 1)
+plt.figure(figsize=(18, 5))
+
+# Training Loss
+plt.subplot(1, 3, 1)
 plt.plot(train_losses, label="Training Loss")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
 plt.title("Training Loss")
 plt.legend()
 
-plt.subplot(1, 2, 2)
+# Validation Loss
+plt.subplot(1, 3, 2)
+plt.plot(val_losses, label="Validation Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Validation Loss")
+plt.legend()
+
+# Test Accuracy
+plt.subplot(1, 3, 3)
 plt.plot(test_accuracies, label="Test Accuracy")
 plt.xlabel("Epoch")
 plt.ylabel("Accuracy")
