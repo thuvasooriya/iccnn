@@ -8,6 +8,7 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 from torch.utils.data import DataLoader
+from torchsummary import summary
 from torchvision import datasets, models, transforms
 from tqdm import tqdm
 
@@ -54,7 +55,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.fc.parameters(), lr=0.001)
 
 # Step 3: Training the Model
-epochs = 2
+epochs = 5
 train_losses = []
 val_losses = []
 test_accuracies = []
@@ -102,7 +103,7 @@ for epoch in range(epochs):
 # Step 4: Model Evaluation
 print("Evaluating the model...")
 y_true, y_pred = [], []
-model.summary()
+summary(model)
 model.eval()
 with torch.no_grad():
     for images, labels in test_loader:
@@ -128,6 +129,7 @@ plt.show()
 plt.figure(figsize=(18, 5))
 
 # Training Loss
+print("train losses: ", train_losses)
 plt.subplot(1, 3, 1)
 plt.plot(train_losses, label="Training Loss")
 plt.xlabel("Epoch")
@@ -136,6 +138,7 @@ plt.title("Training Loss")
 plt.legend()
 
 # Validation Loss
+print("validation losses: ", val_losses)
 plt.subplot(1, 3, 2)
 plt.plot(val_losses, label="Validation Loss")
 plt.xlabel("Epoch")
@@ -145,6 +148,7 @@ plt.legend()
 
 # Test Accuracy
 plt.subplot(1, 3, 3)
+print("test acc: ", test_accuracies)
 plt.plot(test_accuracies, label="Test Accuracy")
 plt.xlabel("Epoch")
 plt.ylabel("Accuracy")
