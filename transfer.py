@@ -1,36 +1,17 @@
+import matplotlib.pyplot as plt
 import torch
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader, random_split
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim import Adam
-import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix
-from torchvision.models import resnet18, ResNet18_Weights
+from torch.optim import Adam
+from torch.utils.data import DataLoader, random_split
+from torchvision import datasets, transforms
+from torchvision.models import ResNet18_Weights, resnet18
 
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),  # Resize to 224x224
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,)),
-    transforms.Lambda(lambda x: x.repeat(3, 1, 1))  # Repeat the channel 3 times
-])
+LEARNING_RATE = 0.001
+BATCH_SIZE = 64
+NUM_EPOCHS = 5
 
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Load MNIST
-mnist_train = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-mnist_test = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
-
-# Split training into training and validation
-train_size = int(0.8 * len(mnist_train))
-val_size = len(mnist_train) - train_size
-train_data, val_data = random_split(mnist_train, [train_size, val_size])
-
-# DataLoaders
-train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
-val_loader = DataLoader(val_data, batch_size=64, shuffle=False)
-test_loader = DataLoader(mnist_test, batch_size=64, shuffle=False)
 
 # CNN Model
 class CNN(nn.Module):
@@ -56,9 +37,8 @@ class CNN(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-
 # Training function
-def train_model(model, train_loader, val_loader, epochs=5, lr=0.001):
+def train_model(model, train_loader, val_loader, epochs=NUM_EPOCHS, lr=LEARNING_RATE):
     optimizer = Adam(model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss()
     train_loss, val_loss = [], []
@@ -85,7 +65,9 @@ def train_model(model, train_loader, val_loader, epochs=5, lr=0.001):
                 val_running_loss += loss.item()
         val_loss.append(val_running_loss / len(val_loader))
 
-        print(f"Epoch {epoch+1}/{epochs} - Train Loss: {train_loss[-1]:.4f}, Val Loss: {val_loss[-1]:.4f}")
+        print(
+            f"Epoch {epoch+1}/{epochs} - Train Loss: {train_loss[-1]:.4f}, Val Loss: {val_loss[-1]:.4f}"
+        )
     return train_loss, val_loss
 
 
@@ -102,22 +84,68 @@ def evaluate_model(model, test_loader):
     print("Classification Report:\n", classification_report(y_true, y_pred))
     print("Confusion Matrix:\n", confusion_matrix(y_true, y_pred))
 
-# evaluate_model(model, test_loader)
 
+if __name__ == "__main__":
+    transform = transforms.Compose(
+        [
+            transforms.Resize((224, 224)),  # Resize to 224x224
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,)),
+            transforms.Lambda(
+                lambda x: x.repeat(3, 1, 1)
+            ),  # Repeat the channel 3 times
+        ]
+    )
 
-# Load a pre-trained ResNet18 model with updated weights argument
-# weights = ResNet18_Weights.IMAGENET1K_V1  # Use pre-trained ImageNet weights
-# pretrained_model = resnet18(weights=weights)
-pretrained_model = resnet18(pretrained=True)
+    # Load MNIST
+    mnist_train = datasets.MNIST(
+        root="./data", train=True, download=True, transform=transform
+    )
+    mnist_test = datasets.MNIST(
+        root="./data", train=False, download=True, transform=transform
+    )
 
-# Modify the final fully connected layer to output 10 classes
-pretrained_model.fc = nn.Linear(pretrained_model.fc.in_features, 10)
+    # Split training into training and validation
+    train_size = int(0.8 * len(mnist_train))
+    val_size = len(mnist_train) - train_size
+    train_data, val_data = random_split(mnist_train, [train_size, val_size])
 
-# Transfer the model to the device
-pretrained_model = pretrained_model.to(device)
+    # DataLoaders
+    train_loader = DataLoader(train_data, batch_size=64, shuffle=True)
+    val_loader = DataLoader(val_data, batch_size=64, shuffle=False)
+    test_loader = DataLoader(mnist_test, batch_size=64, shuffle=False)
 
-# Training with Transfer Learning
-train_loss, val_loss = train_model(pretrained_model, train_loader, val_loader)
+    # Initialize model, train and validate
+    device = torch.device(
+        "cuda"
+        if torch.cuda.is_available()
+        # else "mps"
+        # if torch.backends.mps.is_available()
+        else "cpu"
+    )
+    # model = CNN().to(device)
+    # train_loss, val_loss = train_model(model, train_loader, val_loader)
 
-# Evaluate the pre-trained model
-evaluate_model(pretrained_model, test_loader)
+    # Load a pre-trained ResNet18 model with updated weights argument
+    weights = ResNet18_Weights.DEFAULT  # Use pre-trained ImageNet weights
+    pretrained_model = resnet18(weights=weights)
+
+    # Modify the final fully connected layer to output 10 classes
+    pretrained_model.fc = nn.Linear(pretrained_model.fc.in_features, 10)
+
+    # Transfer the model to the device
+    pretrained_model = pretrained_model.to(device)
+
+    # Training with Transfer Learning
+    train_loss, val_loss = train_model(pretrained_model, train_loader, val_loader)
+
+    # Plot losses
+    plt.plot(train_loss, label="Train Loss")
+    plt.plot(val_loss, label="Validation Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.show()
+
+    # Evaluate the pre-trained model
+    evaluate_model(pretrained_model, test_loader)
